@@ -143,4 +143,32 @@ nohup perl /usr/local/src/ngsShoRT_2.2/ngsShoRT.pl -t 20 -mode trim -min_rl 151 
 -methods 5adpt_lqr -5a_f Illumina_PE_adapters.txt -5a_mp 90 -5a_del 0 \
 -5a_ins 0 -5a_fmi 100 -5a_axn kr -lqs 20 -lq_p 25 -gzip &
 
+################################################################
+# FastQC quality check of filtered FASTQ files from 1st sample #
+################################################################
+
+# Required software is FastQC v0.11.8, consult manual/tutorial
+# for details: http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+
+# Create and enter the quality check output directory:
+mkdir /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering
+cd !$
+
+
+# Run FastQC in one file to see if it's working well:
+fastqc -o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering --noextract --nogroup -t 20 /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/N12_S29_L002/trimmed_N12_S29_L002_R1_001.fastq.gz
+
+#In new rodeo tab
+
+fastqc -o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering --noextract --nogroup -t 20 /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/N12_S29_L002/trimmed_N12_S29_L002_R2_001.fastq.gz
+
+# Transfer compressed folders to personal laptop via SCP (in a new tab from your own mac command line)
+# and check HTML reports:
+scp -r \
+alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering/*fastqc.zip .
+
+##############################################################################
+# Alignment of FASTQ files against the Ovis aries reference genome with STAR #
+##############################################################################
+
 
