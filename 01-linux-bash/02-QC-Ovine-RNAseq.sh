@@ -156,11 +156,13 @@ cd !$
 
 
 # Run FastQC in one file to see if it's working well:
-fastqc -o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering --noextract --nogroup -t 20 /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/N12_S29_L002/trimmed_N12_S29_L002_R1_001.fastq.gz
+fastqc -o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering --noextract --nogroup \
+-t 20 /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/N12_S29_L002/trimmed_N12_S29_L002_R1_001.fastq.gz
 
 #In new rodeo tab
 
-fastqc -o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering --noextract --nogroup -t 20 /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/N12_S29_L002/trimmed_N12_S29_L002_R2_001.fastq.gz
+fastqc -o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering --noextract --nogroup \
+-t 20 /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/N12_S29_L002/trimmed_N12_S29_L002_R2_001.fastq.gz
 
 # Transfer compressed folders to personal laptop via SCP (in a new tab from your own mac command line)
 # and check HTML reports:
@@ -170,5 +172,40 @@ alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-f
 ##############################################################################
 # Alignment of FASTQ files against the Ovis aries reference genome with STAR #
 ##############################################################################
+
+
+# Required software is STAR 2.7.3a, consult manual/tutorial for details:
+https://github.com/alexdobin/STAR/blob/master/doc/STARmanual.pdf
+
+
+# Download Bos taurus reference genome, version UMD3.1.1 from NCBI:  Folder last version: 11/06/2016
+mkdir -p /home/workspace/storage/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/source_file
+cd !$
+nohup wget ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Ovis_aries/latest_assembly_versions/GCF_002742125.1_Oar_rambouillet_v1.0/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.fna.gz &
+
+#unzip file
+gunzip GCF_002742125.1_Oar_rambouillet_v1.0_genomic.fna.gz
+
+# Download annotation file for NCBI Ovis aries Annotation Release 103
+
+mkdir /home/workspace/storage/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/annotation_file
+cd !$
+wget ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Ovis_aries/latest_assembly_versions/GCF_002742125.1_Oar_rambouillet_v1.0/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.gtf.gz
+gunzip GCF_002742125.1_Oar_rambouillet_v1.0_genomic.gtf.gz
+
+
+# Generate genome indexes files using annotations:
+mkdir /home/workspace/storage/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150
+cd !$
+
+
+nohup STAR --runThreadN 40 --runMode genomeGenerate \
+--genomeDir /home/workspace/storage/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150 \
+--genomeFastaFiles \
+/home/workspace/storage/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/source_file/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.fna \
+--sjdbGTFfile /home/workspace/storage/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/annotation_file/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.gtf \
+--sjdbOverhang 150 \
+--outFileNamePrefix \
+/home/workspace/storage/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150 &
 
 
