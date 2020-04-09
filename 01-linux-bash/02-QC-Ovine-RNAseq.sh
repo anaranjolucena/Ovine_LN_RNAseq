@@ -178,8 +178,8 @@ alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-f
 https://github.com/alexdobin/STAR/blob/master/doc/STARmanual.pdf
 
 
-# Download Bos taurus reference genome, version UMD3.1.1 from NCBI:  Folder last version: 11/06/2016
-mkdir -p /home/workspace/storage/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/source_file
+# Download Ovis aries reference genome, Oar rambouillet version 1.0
+mkdir -p /home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/source_file
 cd !$
 nohup wget ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Ovis_aries/latest_assembly_versions/GCF_002742125.1_Oar_rambouillet_v1.0/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.fna.gz &
 
@@ -188,24 +188,26 @@ gunzip GCF_002742125.1_Oar_rambouillet_v1.0_genomic.fna.gz
 
 # Download annotation file for NCBI Ovis aries Annotation Release 103
 
-mkdir /home/workspace/storage/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/annotation_file
+mkdir /home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/annotation_file
 cd !$
 wget ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Ovis_aries/latest_assembly_versions/GCF_002742125.1_Oar_rambouillet_v1.0/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.gtf.gz
 gunzip GCF_002742125.1_Oar_rambouillet_v1.0_genomic.gtf.gz
 
 
 # Generate genome indexes files using annotations:
-mkdir /home/workspace/storage/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150
+mkdir /home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150
 cd !$
 
 
 nohup STAR --runThreadN 40 --runMode genomeGenerate \
---genomeDir /home/workspace/storage/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150 \
+--genomeDir /home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150 \
 --genomeFastaFiles \
-/home/workspace/storage/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/source_file/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.fna \
---sjdbGTFfile /home/workspace/storage/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/annotation_file/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.gtf \
+/home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/source_file/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.fna \
+--sjdbGTFfile /home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/annotation_file/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.gtf \
 --sjdbOverhang 150 \
 --outFileNamePrefix \
-/home/workspace/storage/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150 &
+/home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150 &
+
+
 
 
