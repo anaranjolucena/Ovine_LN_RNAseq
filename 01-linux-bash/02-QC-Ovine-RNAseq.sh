@@ -209,5 +209,33 @@ nohup STAR --runThreadN 40 --runMode genomeGenerate \
 /home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150 &
 
 
+# Create and enter alignment working directory:
+mkdir /home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment
+cd !$
 
+#Create directory for alignment of one file with 1st filter conditions:
+mkdir /home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment/1st_filtered
+cd !$
+
+# Mapping reads from one FASTQ file to the indexed genome,to check it works :
+nohup STAR --runMode alignReads --runThreadN 30 --genomeLoad LoadAndRemove \
+--genomeDir /home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150 \
+--readFilesIn \
+/home/workspace/alucena/ovineLN_RNAseq/filt_fastq/N12_S29_L002/trimmed_N12_S29_L002_R1_001.fastq.gz \
+/home/workspace/alucena/ovineLN_RNAseq/filt_fastq/N12_S29_L002/trimmed_N12_S29_L002_R2_001.fastq.gz \
+--readFilesCommand gunzip -c --outFilterMultimapNmax 10 \
+--outFilterMismatchNmax 10 --outFileNamePrefix ./N12_S29 \
+--outSAMtype BAM Unsorted --outReadsUnmapped Fastx &
+
+#Create directory in quality_check for FASTQC of BAM files
+mkdir /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BAM
+cd !$
+
+# Run FastQC in one file to see if it's working well:
+fastqc -o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BAM --noextract --nogroup \
+-t 20 /home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment/1st_filtered/N12_S29Aligned.out.bam
+
+# Transfer compressed folder to personal laptop via SCP (tab in personal laptop terminal)
+# and check the HTML report:
+scp alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BAM/N12_S29Aligned.out_fastqc.zip .
 
