@@ -239,3 +239,45 @@ fastqc -o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BA
 # and check the HTML report:
 scp alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BAM/N12_S29Aligned.out_fastqc.zip .
 
+##############################################################################
+# Option 2 for Adapter-contamination and quality filtering of raw FASTQ file #
+##############################################################################
+
+# Required software is ngsShoRT (version 2.2). More information can be found
+# here: http://research.bioinformatics.udel.edu/genomics/ngsShoRT/index.html
+
+
+# Run ngsShoRT in one pair of reads changing number of bp covered to 140 (furthest matching index):
+nohup perl /usr/local/src/ngsShoRT_2.2/ngsShoRT.pl -t 20 -mode trim -min_rl 151 \
+-pe1 /home/workspace/ccorreia/ovineRNAseq/fastq/Ovine/N12_S29_L002_R1_001.fastq.gz \
+-pe2 /home/workspace/ccorreia/ovineRNAseq/fastq/Ovine/N12_S29_L002_R2_001.fastq.gz \
+-o /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/2nd_filtered \
+-methods 5adpt_lqr -5a_f Illumina_PE_adapters.txt -5a_mp 90 -5a_del 0 \
+-5a_ins 0 -5a_fmi 140 -5a_axn kr -lqs 20 -lq_p 25 -gzip &
+
+##########################################################################
+# FastQC quality check of option 2 filtering FASTQ files from 1st sample #
+##########################################################################
+
+# Required software is FastQC v0.11.8, consult manual/tutorial
+# for details: http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+
+# Create and enter the quality check output directory:
+mkdir /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-2nd_filtering
+cd !$
+
+# Run FastQC:
+fastqc -o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-2nd_filtering --noextract --nogroup \
+-t 20 /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/2nd_filtered/trimmed_N12_S29_L002_R1_001.fastq.gz
+
+#In new rodeo tab
+fastqc -o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-2nd_filtering --noextract --nogroup \
+-t 20 /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/2nd_filtered/trimmed_N12_S29_L002_R2_001.fastq.gz
+
+# Transfer compressed folders to personal laptop via SCP (in a new tab from your own mac command line) and check HTML reports:
+# Navigate locally to directory, create new directory and enter:
+mkdir post-2nd_filtering
+cd !$
+scp -r \
+alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-2nd_filtering/*fastqc.zip .
+
