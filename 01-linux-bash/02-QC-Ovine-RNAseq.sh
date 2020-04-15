@@ -389,12 +389,12 @@ scp -r \
 alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-4th_filtering/*fastqc.zip .
 
 
-###########################################################################################
-# Alignment of 2nd filtered FASTQ files against the Ovis aries reference genome with STAR #
-###########################################################################################
+###################################################################################################
+# Alignment of 3rd and 4th filtered FASTQ files against the Ovis aries reference genome with STAR #
+###################################################################################################
 
 
-#Create directory for alignment of one file with 2nd filter conditions:
+#Create directory for alignment of one file with 3rd filter conditions:
 mkdir /home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment/3rd_filtered
 cd !$
 
@@ -409,11 +409,11 @@ nohup STAR --runMode alignReads --runThreadN 30 --genomeLoad LoadAndRemove \
 --outSAMtype BAM Unsorted --outReadsUnmapped Fastx &
 
 
-#Create directory for alignment of one file with 2nd filter conditions:
+#Create directory for alignment of one file with 4th filter conditions:
 mkdir /home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment/4th_filtered
 cd !$
 
-# Mapping reads from one FASTQ file (3rd filtered option) to the indexed genome,to check it works :
+# Mapping reads from one FASTQ file (4th filtered option) to the indexed genome,to check it works :
 nohup STAR --runMode alignReads --runThreadN 30 --genomeLoad LoadAndRemove \
 --genomeDir /home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150 \
 --readFilesIn \
@@ -422,4 +422,69 @@ nohup STAR --runMode alignReads --runThreadN 30 --genomeLoad LoadAndRemove \
 --readFilesCommand gunzip -c --outFilterMultimapNmax 10 \
 --outFilterMismatchNmax 10 --outFileNamePrefix ./N12_S29 \
 --outSAMtype BAM Unsorted --outReadsUnmapped Fastx &
+
+#############################################################################################
+# 5th Adapter-contamination and quality filtering of raw FASTQ file SOFTWARE:ngsShoRT #
+#############################################################################################
+
+# Required software is ngsShoRT (version 2.2). More information can be found
+# here: http://research.bioinformatics.udel.edu/genomics/ngsShoRT/index.html
+
+
+# I put file with adapters in this directory from my terminal (not from rodeo)
+scp -r Illumina_PE_adapters13bp.txt alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/filt_fastq
+
+# Run ngsShoRT in one pair of reads to check if it's working:
+nohup perl /usr/local/src/ngsShoRT_2.2/ngsShoRT.pl -t 20 -mode trim -min_rl 151 \
+-pe1 /home/workspace/ccorreia/ovineRNAseq/fastq/Ovine/N12_S29_L002_R1_001.fastq.gz \
+-pe2 /home/workspace/ccorreia/ovineRNAseq/fastq/Ovine/N12_S29_L002_R2_001.fastq.gz \
+-o /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/5th_filtered \
+-methods 5adpt_lqr -5a_f Illumina_PE_adapters13bp.txt -5a_mp 100 -5a_del 0 \
+-5a_ins 0 -5a_fmi 140 -5a_axn kr -lqs 20 -lq_p 25 -gzip &
+
+########################################################################
+# FastQC quality check of option 5 filtering FASTQ files from 1 sample #
+########################################################################
+
+# Required software is FastQC v0.11.8, consult manual/tutorial
+# for details: http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+
+# Create and enter the quality check output directory:
+mkdir /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-5th_filtering
+cd !$
+
+# Run FastQC:
+fastqc -o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-5th_filtering --noextract --nogroup \
+-t 20 /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/5th_filtered/trimmed_N12_S29_L002_R1_001.fastq.gz
+
+#In new rodeo tab
+fastqc -o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-5th_filtering --noextract --nogroup \
+-t 20 /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/5th_filtered/trimmed_N12_S29_L002_R2_001.fastq.gz
+
+# Transfer compressed folders to personal laptop via SCP (in a new tab from your own mac command line) and check HTML reports:
+# Navigate locally to quality check directory and create new directory:
+mkdir post-5th_filtering
+cd !$
+scp -r \
+alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-5th_filtering/*fastqc.zip .
+
+###########################################################################################
+# Alignment of 5th filtered FASTQ files against the Ovis aries reference genome with STAR #
+###########################################################################################
+
+
+#Create directory for alignment of one file with 5th filter conditions:
+mkdir /home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment/5th_filtered
+cd !$
+
+# Mapping reads from one FASTQ file (5th filtered option) to the indexed genome,to check it works :
+nohup STAR --runMode alignReads --runThreadN 30 --genomeLoad LoadAndRemove \
+--genomeDir /home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150 \
+--readFilesIn \
+/home/workspace/alucena/ovineLN_RNAseq/filt_fastq/5th_filtered/trimmed_N12_S29_L002_R1_001.fastq.gz \
+/home/workspace/alucena/ovineLN_RNAseq/filt_fastq/5th_filtered/trimmed_N12_S29_L002_R2_001.fastq.gz \
+--readFilesCommand gunzip -c --outFilterMultimapNmax 10 \
+--outFilterMismatchNmax 10 --outFileNamePrefix ./N12_S29_ \
+--outSAMtype BAM Unsorted --outReadsUnmapped Fastx &
+
 
