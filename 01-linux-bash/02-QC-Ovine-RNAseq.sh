@@ -153,7 +153,7 @@ echo "perl /usr/local/src/ngsShoRT_2.2/ngsShoRT.pl -t 20 -mode trim -min_rl 151 
 -o /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/$sample \
 -methods 5adpt_lqr -5a_f Illumina_PE_adapters13bp.txt -5a_mp 100 \
 -5a_del 0 -5a_ins 0 -5a_fmi 140 -5a_axn kr -lqs 20 -lq_p 25 -gzip" \
->> filtering.sh; done;
+>> filtering.sh; done
 
 # Split and run all scripts on Rodeo:
 split -d -l 10 filtering.sh filtering.sh.
@@ -162,6 +162,46 @@ do
 chmod 755 $script
 nohup ./$script > ${script}.nohup &
 done
+
+# Check that all files were processed:
+for file in `ls filtering.sh.0*.nohup`; \
+do grep -o 'Done-MAIN' $file | wc -l; done
+
+# Compress files with discarded reads:
+# Do bash script:
+for file in `find /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/ \
+-name extracted_*.txt`; do echo "gzip -9 $file" >> discarded_compression.sh; \
+done
+
+#Run script:
+for script in `ls discarded_compression.sh`; \
+do 
+chmod 755 $script 
+nohup ./$script &
+done
+
+	# Gather ngsShoRT reports from all samples into one file:
+	for file in `find /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/ \
+	-name final_PE_report.txt`; \
+	do echo \
+	"\`dirname $file | perl -pe 's/.*(\A\w\d\d_S\d\d_L00\d)/\$1/'\` \
+	\`grep 'Read Pair Count:' $file\` \
+	\`grep 'Removed PE Pair\* Count:' $file\` >> \
+	ngsshort_cattle.txt" >> ngsshort_summary_cattle.sh
+	done
+
+	chmod 755 ngsshort_summary_cattle.sh
+	./ngsshort_summary_cattle.sh
+
+
+	# Sort samples in ngsshort_cattle.txt
+	sort ngsshort_cattle.txt >>sorted_ngsshort_summary.txt
+
+
+	# Transfer ngsShoRT summary to laptop via SCP.
+	scp -r acampos@rodeo.ucd.ie://home/workspace/acampos/flukeRNAseq/fastq/filt_fastq/sorted_ngsshort_summary.txt \
+	Dropbox/Liver-Fluke-RNAseq/ngsshort/
+
 
 ################################################
 # FastQC quality check of filtered FASTQ files #
@@ -191,7 +231,34 @@ scp -r \
 alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering/*fastqc.zip .
 
 # Create a bash script to perform FastQC quality check on all fastq.gz files:
+for file in `find /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/ \
+-name *_L002_R*.fastq.gz`; \
+do echo "fastqc --noextract --nogroup -t 20 \
+-o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering $file" \
+>> fastqc_filt.sh; \
+done
 
+# Check number of lines in script:
+wc -l fastqc_filt.sh
+
+# Split and run all scripts on Rodeo:
+split -d -l 19 fastqc_filt.sh fastqc_filt.sh.
+for script in `ls fastqc_filt.sh.*`
+do
+chmod 755 $script
+nohup ./$script > ${script}.nohup &
+done
+
+# Check if all files were processed:
+for file in `ls fastqc_filt.sh.0*.nohup`; \
+do more $file | grep "Analysis complete" >> succesful_fastqc.txt
+done
+
+# Check number of lines in created document
+wc -l succesful_fastqc.txt
+
+# Deleted all HTML files:
+rm -r *.html
 
 ##############################################################################
 # Alignment of FASTQ files against the Ovis aries reference genome with STAR #
