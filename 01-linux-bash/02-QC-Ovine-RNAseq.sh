@@ -180,27 +180,27 @@ chmod 755 $script
 nohup ./$script &
 done
 
-	# Gather ngsShoRT reports from all samples into one file:
-	for file in `find /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/ \
-	-name final_PE_report.txt`; \
-	do echo \
-	"\`dirname $file | perl -pe 's/.*(\A\w\d\d_S\d\d_L00\d)/\$1/'\` \
-	\`grep 'Read Pair Count:' $file\` \
-	\`grep 'Removed PE Pair\* Count:' $file\` >> \
-	ngsshort_cattle.txt" >> ngsshort_summary_cattle.sh
-	done
+# Gather ngsShoRT reports from all samples into one file:
+for file in `find /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/ \
+-name final_PE_report.txt`; \
+do echo echo \
+"\`dirname $file | perl -pe 's/.*(N\d+_S\d\d)/\$1/'\` \
+\`grep 'Read Pair Count:' $file\` \
+\`grep 'Removed PE Pair\* Count:' $file\` >> \
+ngsshort.txt" >> ngsshort_summary.sh
+done
 
-	chmod 755 ngsshort_summary_cattle.sh
-	./ngsshort_summary_cattle.sh
+chmod 755 ngsshort_summary.sh
+./ngsshort_summary.sh
+
+# Add header to facilitate wrangling in R later on: 
+sed -i $'1 i\\\nSample_name X1 X2 X3 Read_pair_count X4 X5 X6 X7 Removed_PE_pair_count Percent_removed' ngsshort.txt
 
 
-	# Sort samples in ngsshort_cattle.txt
-	sort ngsshort_cattle.txt >>sorted_ngsshort_summary.txt
-
-
-	# Transfer ngsShoRT summary to laptop via SCP.
-	scp -r acampos@rodeo.ucd.ie://home/workspace/acampos/flukeRNAseq/fastq/filt_fastq/sorted_ngsshort_summary.txt \
-	Dropbox/Liver-Fluke-RNAseq/ngsshort/
+# Transfer compressed folders to personal laptop via SCP (in a new tab from your own mac command line)
+# and check HTML reports:
+scp \
+alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/filt_fastq/ngsshort.txt .
 
 
 ################################################
@@ -243,7 +243,7 @@ wc -l fastqc_filt.sh
 
 # Split and run all scripts on Rodeo:
 split -d -l 19 fastqc_filt.sh fastqc_filt.sh.
-for script in `ls fastqc_filt.sh.*`
+for script in `ls fastqc_filt.sh.0*`;
 do
 chmod 755 $script
 nohup ./$script > ${script}.nohup &
@@ -259,6 +259,12 @@ wc -l succesful_fastqc.txt
 
 # Deleted all HTML files:
 rm -r *.html
+
+#Send to laptop
+scp -r \
+alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering/*fastqc.zip .
+
+
 
 ##############################################################################
 # Alignment of FASTQ files against the Ovis aries reference genome with STAR #
@@ -314,6 +320,34 @@ nohup STAR --runMode alignReads --runThreadN 30 --genomeLoad LoadAndRemove \
 --outFilterMismatchNmax 10 --outFileNamePrefix ./N12_S29_ \
 --outSAMtype BAM Unsorted --outReadsUnmapped Fastx &
 
+# Create a bash script to perform alignment of paired FASTQ files:
+for file in `find /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/ \
+-name *R1_001.fastq.gz`; \
+do file2=`echo $file | perl -p -e 's/R1(_001.fastq.gz)$/R2$1/'`; \
+sample=`basename $file | perl -p -e 's/trimmed_(N\d+_S\d\d_)L002_R1_001.fastq.gz/$1/'`; \
+foldername=`echo $sample | perl -p -e 's/(N\d+_S\d\d)_$/$1/'`; \
+echo "mkdir ./$foldername; \
+cd ./$foldername; \
+STAR --runMode alignReads --runThreadN 30 --genomeLoad LoadAndRemove \
+--genomeDir /home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150 \
+--readFilesIn $file $file2 \
+--readFilesCommand gunzip -c --outFilterMultimapNmax 10 \
+--outFilterMismatchNmax 10 --outFileNamePrefix ./$sample \
+--outSAMtype BAM Unsorted --outReadsUnmapped Fastx" \
+>> alignment.sh; done
+
+# Split and run all scripts on Rodeo:
+split -d -l 10 alignment.sh alignment.sh.
+for script in `ls alignment.sh.*`;
+do
+chmod 755 $script
+nohup ./$script > ${script}.nohup &
+done
+
+#############################################
+# FastQC quality check of aligned BAM files #
+#############################################
+
 #Create directory in quality_check for FASTQC of BAM file
 mkdir /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BAM
 cd !$
@@ -326,4 +360,6 @@ fastqc -o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BA
 # and check the HTML report:
 scp alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BAM/N12_S29Aligned.out_fastqc.zip .
 
-#Create bash script to run aligment of all samples:
+
+
+
