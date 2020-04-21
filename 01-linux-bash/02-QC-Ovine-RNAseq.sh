@@ -326,8 +326,8 @@ for file in `find /home/workspace/alucena/ovineLN_RNAseq/filt_fastq/ \
 do file2=`echo $file | perl -p -e 's/R1(_001.fastq.gz)$/R2$1/'`; \
 sample=`basename $file | perl -p -e 's/trimmed_(N\d+_S\d\d_)L002_R1_001.fastq.gz/$1/'`; \
 foldername=`echo $sample | perl -p -e 's/(N\d+_S\d\d)_$/$1/'`; \
-echo "mkdir ./$foldername; \
-cd ./$foldername; \
+echo "mkdir /home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment/$foldername; \
+cd /home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment/$foldername; \
 STAR --runMode alignReads --runThreadN 30 --genomeLoad LoadAndRemove \
 --genomeDir /home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/STAR-2.7.3a_index_150 \
 --readFilesIn $file $file2 \
@@ -344,9 +344,34 @@ chmod 755 $script
 nohup ./$script > ${script}.nohup &
 done
 
+# Check nohup.out file to see how many jobs finished successfully:
+grep -c 'finished successfully' alignment.sh.00.nohup
+# 10: It worked
+grep -c 'finished successfully' alignment.sh.01.nohup
+# 9: It worked
+
+#Copy script for perl, in alignment directory:
+cp /home/workspace/acampos/flukeRNAseq/star_report_opener.pl .
+chmod 755 star_report_opener.pl
+
+# Merge all STAR log.final.out files into a single file:
+for file in `find /home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment \
+-name *Log.final.out`; \
+do perl /home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment/star_report_opener.pl -report $file; done;
+
+#Transfer to personal laptop
+scp \
+alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment/All_star_log_final_out.txt .
+
+
 #############################################
 # FastQC quality check of aligned BAM files #
 #############################################
+
+
+# Required software is FastQC v0.11.8, consult manual/tutorial
+# for details: http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+
 
 #Create directory in quality_check for FASTQC of BAM file
 mkdir /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BAM
@@ -360,6 +385,55 @@ fastqc -o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BA
 # and check the HTML report:
 scp alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BAM/N12_S29Aligned.out_fastqc.zip .
 
+# Create a bash script to perform FastQC quality check on aligned SAM files:
+for file in `find /home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment/*_S*/ \
+-name *.bam`; do echo "fastqc --noextract --nogroup -t 20 \
+-o /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BAM $file" >> \
+fastqc_aligned.sh; done;
+
+# Split and run all scripts on Rodeo
+split -d -l 10 fastqc_aligned.sh fastqc_aligned.sh.
+chmod 755 fastqc_aligned.sh.*
+
+for script in `ls fastqc_aligned.sh.*`;
+do
+nohup ./$script > ${script}.nohup &
+done
+
+# Check if all files were processed:
+grep -c 'Analysis complete' fastqc_aligned.sh.00.nohup
+grep -c 'Analysis complete' fastqc_aligned.sh.01.nohup
+
+# Delete all the HTML files:
+rm -r *.html
+
+# Check all output from FastQC:
+mkdir /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BAM/tmp
+
+for file in `ls *_fastqc.zip`; do unzip \
+$file -d /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BAM/tmp; \
+done
+
+for file in \
+`find /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BAM/tmp/*_fastqc/ \
+-name summary.txt`; do more $file >> reports_post-alignment.txt; done
+
+for file in \
+`find /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BAM/tmp/*_fastqc/ \
+-name fastqc_data.txt`; do head -n 10 $file >> basic_stats_post_alignment.txt; \
+done
+
+# Secure copy tmp folder to laptop (share folder) and rename folder as post_alignment.
+# I use my own laptop (out of Rodeo)
+scp -r alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-alignment_BAM/tmp .
+
+# Remove temporary folder in Rodeo:
+rm -r tmp/
+
+
+###################################################################
+# Summarisation of gene counts with featureCounts for sense genes #
+###################################################################
 
 
 
