@@ -13,8 +13,8 @@
 cd /home/workspace/ccorreia/ovineRNAseq/fastq/Ovine
 
 # Perform md5sum check:
- md5sum -c values.md5sum >> \
- /home/workspace/ccorreia/ovineRNAseq/fastq/Ovine/md5check_UCD.txt
+md5sum -c values.md5sum >> \
+/home/workspace/ccorreia/ovineRNAseq/fastq/Ovine/md5check_UCD.txt
 
 # Check that all files passed the check:
 grep -c 'OK' md5check_UCD.txt
@@ -264,7 +264,28 @@ rm -r *.html
 scp -r \
 alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering/*fastqc.zip .
 
+# Check all output from FastQC:
+mkdir /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering/tmp
 
+for file in `ls *_fastqc.zip`; do unzip \
+$file -d /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering/tmp; \
+done
+
+for file in \
+`find /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering/tmp/*_fastqc/ \
+-name summary.txt`; do more $file >> reports_post-alignment.txt; done
+
+for file in \
+`find /home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering/tmp/*_fastqc/ \
+-name fastqc_data.txt`; do head -n 10 $file >> basic_stats_post_alignment.txt; \
+done
+
+#Remove tmp directory
+rm -r tmp
+
+#Transfer to laptop
+scp \
+alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check/post-filtering/*.txt .
 
 ##############################################################################
 # Alignment of FASTQ files against the Ovis aries reference genome with STAR #
@@ -431,9 +452,84 @@ scp -r alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/quality_check
 rm -r tmp/
 
 
+#########################
+# Calculate insert size #
+#########################
+
+#Software employed 
+### Picard version 2.18.27: java -jar /usr/local/src/picard/build/libs/picard.jar
+
+# Create and go to working directory:
+mkdir /home/workspace/alucena/ovineLN_RNAseq/insert_size
+cd !$
+
+
+# Sort aligned BAM files:
+for file in \
+`find /home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment \
+-name *Aligned.out.bam`; \
+do outfile=`basename $file | perl -p -e 's/Aligned.out.bam/Sorted.out.bam/'`; \
+echo "java -jar /usr/local/src/picard/build/libs/picard.jar \
+SortSam I=$file O=$outfile SORT_ORDER=coordinate" >> sort.sh; \
+done
+
+# Split and run all scripts on Rodeo
+split -d -l 1 sort.sh sort.sh.
+chmod 755 sort.sh.*
+
+for script in `ls sort.sh.*`;
+do
+nohup ./$script > ${script}.nohup &
+done
+
+
+	# Collect insert sizes:
+	for file in `ls *_Sorted.out.bam`; \
+	do sample=`basename $file | perl -p -e 's/_Sorted.out.bam//'`; \
+	echo "java -jar /usr/local/src/picard-tools-1.137/picard.jar \
+	CollectInsertSizeMetrics \
+	I=$file \
+	O=${sample}_insert_size_metrics.txt \
+	H=${sample}_insert_size_histogram.pdf M=0.5" >> collect_insert_size.sh; \
+	done
+
+	# Run script on Stampede:
+	chmod 755 collect_insert_size.sh
+	nohup ./collect_insert_size.sh > collect_insert_size.sh.nohup &
+
+	# Collect insert size metrics for all samples into one file:
+	for file in `ls $HOME/scratch/Silver_Challenge_Seq/insert_size/*_insert_size_metrics.txt`; \
+	do sample=`basename $file | perl -p -e 's/_insert_size_metrics.txt//'`; \
+	header=`grep 'MEDIAN_INSERT_SIZE' $file`; \
+	stats=`sed -n '/MEDIAN_INSERT_SIZE/{n;p;}' $file`; \
+	printf "Sample_id\t$header\n$sample\t$stats" \
+	>> All_insert_size.txt; \
+	done
+
+	# Transfer stats to laptop:
+	scp \
+	ccorreia@stampede.ucd.ie:/home/ccorreia/scratch/Silver_Challenge_Seq/insert_size/All_insert_size.txt .
+
 ###################################################################
 # Summarisation of gene counts with featureCounts for sense genes #
 ###################################################################
 
+
+# Required package is featureCounts, which is part of Subread software (featureCounts v2.0.0),
+# consult manual for details:
+# http://bioinf.wehi.edu.au/subread-package/SubreadUsersGuide.pdf
+
+
+# Create working directories:
+cd /home/workspace/alucena/ovineLN_RNAseq
+mkdir -p Count_summarisation/sense
+cd /home/workspace/alucena/ovineLN_RNAseq/Count_summarisation/sense
+
+
+# Run featureCounts with one sample to check if it is working fine:
+featureCounts -a \
+/home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/annotation_file/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.gtf \
+-B -p -C -R BAM -s 1 -T 15 -t exon -g 'gene_id ""' -o ./counts.txt \
+/home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment/N12_S29/N12_S29_Aligned.out.bam
 
 
