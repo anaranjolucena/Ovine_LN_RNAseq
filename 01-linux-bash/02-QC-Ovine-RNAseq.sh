@@ -474,7 +474,7 @@ SortSam I=$file O=$outfile SORT_ORDER=coordinate" >> sort.sh; \
 done
 
 # Split and run all scripts on Rodeo
-split -d -l 1 sort.sh sort.sh.
+split -d -l 10 sort.sh sort.sh.
 chmod 755 sort.sh.*
 
 for script in `ls sort.sh.*`;
@@ -483,32 +483,37 @@ nohup ./$script > ${script}.nohup &
 done
 
 
-	# Collect insert sizes:
-	for file in `ls *_Sorted.out.bam`; \
-	do sample=`basename $file | perl -p -e 's/_Sorted.out.bam//'`; \
-	echo "java -jar /usr/local/src/picard-tools-1.137/picard.jar \
-	CollectInsertSizeMetrics \
-	I=$file \
-	O=${sample}_insert_size_metrics.txt \
-	H=${sample}_insert_size_histogram.pdf M=0.5" >> collect_insert_size.sh; \
-	done
+# Collect insert sizes:
+for file in `ls *_Sorted.out.bam`; \
+do sample=`basename $file | perl -p -e 's/_Sorted.out.bam//'`; \
+echo "java -jar /usr/local/src/picard/build/libs/picard.jar \
+CollectInsertSizeMetrics \
+I=$file \
+O=${sample}_insert_size_metrics.txt \
+H=${sample}_insert_size_histogram.pdf M=0.5" >> collect_insert_size.sh; \
+done
 
-	# Run script on Stampede:
-	chmod 755 collect_insert_size.sh
-	nohup ./collect_insert_size.sh > collect_insert_size.sh.nohup &
+# Split and run all scripts on Rodeo
+chmod 755 collect_insert_size.sh.*
 
-	# Collect insert size metrics for all samples into one file:
-	for file in `ls $HOME/scratch/Silver_Challenge_Seq/insert_size/*_insert_size_metrics.txt`; \
-	do sample=`basename $file | perl -p -e 's/_insert_size_metrics.txt//'`; \
-	header=`grep 'MEDIAN_INSERT_SIZE' $file`; \
-	stats=`sed -n '/MEDIAN_INSERT_SIZE/{n;p;}' $file`; \
-	printf "Sample_id\t$header\n$sample\t$stats" \
-	>> All_insert_size.txt; \
-	done
+for script in `ls collect_insert_size.sh`;
+do
+nohup ./$script > ${script}.nohup &
+done
 
-	# Transfer stats to laptop:
-	scp \
-	ccorreia@stampede.ucd.ie:/home/ccorreia/scratch/Silver_Challenge_Seq/insert_size/All_insert_size.txt .
+
+# Collect insert size metrics for all samples into one file:
+for file in `ls /home/workspace/alucena/ovineLN_RNAseq/insert_size/*_insert_size_metrics.txt`; \
+do sample=`basename $file | perl -p -e 's/_insert_size_metrics.txt//'`; \
+header=`grep 'MEDIAN_INSERT_SIZE' $file`; \
+stats=`sed -n '/MEDIAN_INSERT_SIZE/{n;p;}' $file`; \
+printf "Sample_id\t$header\n$sample\t$stats" \
+>> All_insert_size.txt; \
+done
+
+# Transfer stats to laptop:
+scp \
+alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/insert_size/All_insert_size.txt .
 
 ###################################################################
 # Summarisation of gene counts with featureCounts for sense genes #
@@ -520,6 +525,13 @@ done
 # http://bioinf.wehi.edu.au/subread-package/SubreadUsersGuide.pdf
 
 
+# Download GFF annotation file for NCBI Ovis aries Annotation Release 103 (GTF file not working with featureCounts)
+
+cd /home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/annotation_file
+wget ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Ovis_aries/latest_assembly_versions/GCF_002742125.1_Oar_rambouillet_v1.0/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.gff.gz
+gunzip GCF_002742125.1_Oar_rambouillet_v1.0_genomic.gff.gz
+
+
 # Create working directories:
 cd /home/workspace/alucena/ovineLN_RNAseq
 mkdir -p Count_summarisation/sense
@@ -528,8 +540,61 @@ cd /home/workspace/alucena/ovineLN_RNAseq/Count_summarisation/sense
 
 # Run featureCounts with one sample to check if it is working fine:
 featureCounts -a \
-/home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/annotation_file/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.gtf \
--B -p -C -R BAM -s 1 -T 15 -t exon -g 'gene_id ""' -o ./counts.txt \
+/home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/annotation_file/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.gff \
+-B -p -C -R BAM -s 2 -T 15 -t gene -g Dbxref -F GFF -o ./counts.txt \
 /home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment/N12_S29/N12_S29_Aligned.out.bam
 
+# Bash script to run featureCounts in all samples:
+for file in `find /home/workspace/alucena/ovineLN_RNAseq/STAR-2.7.3a_alignment \
+-name *_Aligned.out.bam`; \
+do sample=`basename $file | perl -p -e 's/_Aligned.out.bam//'`; \
+echo "mkdir /home/workspace/alucena/ovineLN_RNAseq/Count_summarisation/sense/$sample; \
+cd /home/workspace/alucena/ovineLN_RNAseq/Count_summarisation/sense/$sample; \
+featureCounts -a \
+/home/workspace/genomes/ovisaries/Oar_rambouillet_v1.0_NCBI/annotation_file/GCF_002742125.1_Oar_rambouillet_v1.0_genomic.gff \
+-B -p -C -R BAM -s 2 -T 20 -t gene -g Dbxref -F GFF \
+-o ${sample}_counts.txt $file" >> counts.sh; \
+done
+
+
+# Split and run all scripts on Rodeo
+split -d -l 10 counts.sh counts.sh.
+chmod 755 counts.sh.*
+
+for script in `ls counts.sh.*`;
+do
+nohup ./$script > ${script}.nohup &
+done
+
+# Check if all files were processed:
+grep -c 'Summary of counting results can be found in file' counts.sh.00.nohup # 10 lines
+grep -c 'Summary of counting results can be found in file' counts.sh.01.nohup # 9 lines
+
+# Copy all *counts.txt files to temporary folder:
+mkdir /home/workspace/alucena/ovineLN_RNAseq/Count_summarisation/sense/tmp
+
+for file in `find /home/workspace/alucena/ovineLN_RNAseq/Count_summarisation/sense/ \
+-name *_counts.txt`; do cp $file \
+-t /home/workspace/alucena/ovineLN_RNAseq/Count_summarisation/sense/tmp; \
+done
+
+# Transfer count files to laptop:
+scp -r alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/Count_summarisation/sense/tmp .
+
+# Remove tmp folder:
+rm -r tmp
+
+# Copy all *summary files to temporary folder:
+mkdir /home/workspace/alucena/ovineLN_RNAseq/Count_summarisation/sense/tmp2
+
+for file in `find /home/workspace/alucena/ovineLN_RNAseq/Count_summarisation/sense \
+-name *summary`; do cp $file \
+-t /home/workspace/alucena/ovineLN_RNAseq/Count_summarisation/sense/tmp2; \
+done
+
+# Transfer count files to laptop:
+scp -r alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/Count_summarisation/sense/tmp2 .
+
+# Remove tmp folder:
+rm -r tmp2
 
