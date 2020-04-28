@@ -494,7 +494,7 @@ H=${sample}_insert_size_histogram.pdf M=0.5" >> collect_insert_size.sh; \
 done
 
 # Split and run all scripts on Rodeo
-chmod 755 collect_insert_size.sh.*
+chmod 755 collect_insert_size.sh
 
 for script in `ls collect_insert_size.sh`;
 do
@@ -505,11 +505,19 @@ done
 # Collect insert size metrics for all samples into one file:
 for file in `ls /home/workspace/alucena/ovineLN_RNAseq/insert_size/*_insert_size_metrics.txt`; \
 do sample=`basename $file | perl -p -e 's/_insert_size_metrics.txt//'`; \
-header=`grep 'MEDIAN_INSERT_SIZE' $file`; \
 stats=`sed -n '/MEDIAN_INSERT_SIZE/{n;p;}' $file`; \
-printf "Sample_id\t$header\n$sample\t$stats" \
->> All_insert_size.txt; \
+printf "${sample}\t${stats}\n" >> All_insert_size.txt; \
 done
+
+wc -l All_insert_size.txt # 19 lines
+
+# Add header to summary stats file:
+header=`grep 'MEDIAN_INSERT_SIZE' /home/workspace/alucena/ovineLN_RNAseq/insert_size/N12_S29_insert_size_metrics.txt`; \
+sed -i $"1 i\Sample_id\t${header}" \
+All_insert_size.txt
+
+wc -l All_insert_size.txt # 20 lines
+
 
 # Transfer stats to laptop:
 scp \
