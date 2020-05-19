@@ -5,7 +5,7 @@
 
 
 # Author: Amalia Naranjo Lucena
-# Last updated on: April 2020
+# Last updated on: May 2020
 
 
 ############################################
@@ -72,6 +72,16 @@ files <- list.files(path        = countsDir,
                     full.names  = FALSE,
                     recursive   = FALSE,
                     ignore.case = FALSE)
+
+files
+length(files)
+
+# Remove sample N58 due to underlying health issue involving liver (see phenotypic data and PCA)
+# Remove sample N66 because it is an outlier in PCA
+
+
+remove <- c("N58_S40_counts.txt", "N66_S41_counts.txt")
+files <- files[!files %in% remove]
 
 files
 length(files)
@@ -193,8 +203,8 @@ dplyr::filter(gene_annot, EntrezID == "443058")
 # Treatment group (avoid using underscores)
 rawCounts$samples$group <- rownames(rawCounts$samples)
 rawCounts$samples$group %<>%
-  str_replace("N(5|15|24|49|58|71|76|79)_S\\d\\d$", "Control") %>%
-  str_replace("N(12|13|17|19|23|42|51|55|66|67|73)_S\\d\\d$", "Infected") %>%
+  str_replace("N(5|15|24|49|71|76|79)_S\\d\\d$", "Control") %>%
+  str_replace("N(12|13|17|19|23|42|51|55|67|73)_S\\d\\d$", "Infected") %>%
   factor(levels = c("Control", "Infected"))
 
 # Check data frame
@@ -278,9 +288,9 @@ dim(LN_dgelist$counts)
 
 
 # Filter lowly expressed tags, retaining only tags with
-# more than 1 count per million in 8 or more libraries
-# (8 libraries correspond to the smallest group)
-LN_filt <- LN_no_zeros[rowSums(cpm(LN_no_zeros) > 1) >= 8, ]
+# more than 1 count per million in 7 or more libraries
+# (7 libraries correspond to the smallest group)
+LN_filt <- LN_no_zeros[rowSums(cpm(LN_no_zeros) > 1) >= 7, ]
 dim(LN_filt$counts)
 head(LN_filt$counts)
 
