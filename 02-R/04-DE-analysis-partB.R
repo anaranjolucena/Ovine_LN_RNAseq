@@ -24,11 +24,13 @@ library(ggrepel)
 library(ggfortify)
 library(statmod)
 
+
 # Uncomment functions below to install packages in case you don't have them
 #install.packages("ggridges")
 #install.packages("ggrepel")
 #install.packages("ggfortify")
 #install.packages("statmod")
+
 
 ####################################################
 # 15 Working directory, data, fonts, and time zone #
@@ -174,8 +176,44 @@ ggsave(filename  = "pc1vspc2.pdf",
        width     = 7,
        units     = "in")
 
+######################
+# 19 Plot dendrogram #
+######################
+
+# Transpose the counts matrix, calculation of distance and hierarchical clustering
+
+LN_dgelist %>%
+  cpm() %>%
+  t() %>%
+  dist() %>%
+  hclust() -> clusters
+
+clusters
+
+# Check what clusters is composed of
+names(clusters)
+
+# Check labels and remove _Sdd
+
+clusters$labels
+
+clusters$labels %<>%
+  str_remove("_S\\d\\d")
+
+clusters$labels
+
+# Open a pdf file
+pdf(file.path(paste0(imgDir, "Clusterdendrogram_samplesremoved.pdf")))
+
+# Create a plot
+plot(clusters, main = "Cluster dendrogram without N58 and N66") # plots the clusters as a dendrogram
+
+# Close the pdf file
+dev.off() 
+
+
 ###############################
-# 19 Create the design matrix #
+# 20 Create the design matrix #
 ###############################
 
 # Create a design matrix
@@ -194,7 +232,7 @@ design
 colnames(design)
 
 #########################################
-# 20 Estimate the dispersion parameters #
+# 21 Estimate the dispersion parameters #
 #########################################
 
 # Common and trended dispersions are estimated with the
@@ -216,7 +254,7 @@ sqrt(LN_disp$common.dispersion)
 
 
 ################################
-# 21 Plot: BCV and dispersions #
+# 22 Plot: BCV and dispersions #
 ################################
 
 # Create a dataframe with the dispersion values
@@ -271,13 +309,13 @@ ggsave("LN_BCV.pdf",
 
 
 ##########################
-# 22 Save R session info #
+# 23 Save R session info #
 ##########################
 
 devtools::session_info()
 
 #######################
-# 23 Save .RData file #
+# 24 Save .RData file #
 #######################
 
 # Detach all loaded packages (except base R packages):
