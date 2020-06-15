@@ -16,6 +16,7 @@ library(here)
 library(devtools)
 library(tidyverse)
 library(magrittr)
+library(tidyr)
 
 
 ############################################
@@ -212,10 +213,18 @@ sheep_join %<>%
 
 View(sheep_join)
 
+# 7 Separate column with 2 IDs
+
+sheep_join %<>% 
+  separate(human_gene_symbol, c("Human_ID1", "Human_ID2"), sep = ";")
+
+View(sheep_join)
+
 # Save csv file
 
 write_csv(sheep_join, file.path(paste0(tablesDir, "Orthologs_IPA.csv")),
           col_names = TRUE)
+
 
 ##########################
 # 7 Save R session info #
