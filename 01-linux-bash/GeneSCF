@@ -1,0 +1,58 @@
+
+##########################################
+#  Ovine Lymph Node Liver Fluke RNA-seq  #
+##########################################
+ 
+# Author: Amalia Naranjo
+# Last updated on: 01/07/2020
+
+# Go to working directory in rodeo
+
+/home/workspace/alucena
+
+# Download 
+
+wget  http://genescf.kandurilab.org/ftp/geneSCF-master-v1.1-p2.tar.gz
+
+# Uncompress
+
+tar -zxvf geneSCF-master-v1.1-p2.tar.gz
+
+# Enter folder
+
+cd geneSCF-master-source-v1.1-p2/
+
+# Prepare KEGG database
+
+./prepare_database -db=KEGG -org=oas
+
+
+# Sort file by ascending FDR and send to rodeo
+
+scp Infected_DEgeneIDs.csv alucena@rodeo.ucd.ie:/home/workspace/alucena/ovineLN_RNAseq/GeneSCF
+
+file Infected_DEgeneIDs.csv
+
+# Infected_DEgenes.csv: ASCII text, with CRLF line terminators
+
+dos2unix Infected_DEgeneIDs.csv
+
+file Infected_DEgeneIDs.csv 
+
+# Infected_DEgenes.csv: ASCII text
+
+cat Infected_DEgeneIDs.csv | cut -d, -f1 > gid_sheep.list
+
+sed -i '/EntrezID/d' gid_sheep.list
+
+head gid_sheep.list
+
+# It doesn't create a folder for output files
+
+./geneSCF -m=normal \
+-i=/home/workspace/alucena/ovineLN_RNAseq/GeneSCF/gid_sheep.list \
+-o=/home/workspace/alucena/ovineLN_RNAseq/GeneSCF/output -t=gid \
+-db=KEGG -bg=14399 --plot=yes -org=oas
+
+
+
