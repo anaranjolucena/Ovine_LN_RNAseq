@@ -23,6 +23,7 @@ library(tidyr)
 
 # Check working directory
 here()
+tablesDir <- here("Tables/")
 
 # Define variables for subdirectories
 
@@ -58,6 +59,11 @@ DEgenes_df %>%
               
 View(join)
 
+# Save list of genes without unmapped
+
+join %>%
+  write_csv(file.path(paste0(tablesDir, "AllDAVIDgenes.csv")),
+          col_names = TRUE)
 
 ############################################
 # 05 filter values of logFC > 1 , or < -1 #
@@ -73,7 +79,7 @@ join %>%
 # Save csv file
 
 david_df %>%
-  write_csv(file.path(paste0(tablesDir, "DAVIDgenes.csv")),
+  write_csv(file.path(paste0(tablesDir, "CutoffDAVIDgenes.csv")),
             col_names = TRUE)
 
 ##########################
